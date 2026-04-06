@@ -1,0 +1,5 @@
+@source "./components/**/*.{js,jsx,ts,tsx}";
+@source "./node_modules/shadcn-ui-upstream/apps/v4/registry/new-york-v4/ui/**/*.{js,jsx,ts,tsx}";
+@source "./node_modules/shadcn-ui-upstream/apps/v4/lib/**/*.{js,jsx,ts,tsx}";
+
+@import "shadcn-ui-upstream/apps/v4/app/globals.css";

@@ -1,0 +1,4 @@
+node_modules
+.vite
+ui/icons/generated
+ui/test/artifacts

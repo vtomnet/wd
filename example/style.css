@@ -1,0 +1,145 @@
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--ui-muted);
+  color: var(--ui-foreground);
+}
+
+body {
+  width: 100%;
+  padding: 32px 16px;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+#app {
+  width: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.app {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  display: grid;
+  gap: 20px;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+}
+
+.hero > *,
+.toolbar > *,
+.todo > * {
+  min-width: 0;
+}
+
+.hero__title {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  line-height: 1;
+}
+
+.hero__description,
+.hero__stats,
+.toolbar__message,
+.empty,
+.footer {
+  color: var(--ui-muted-foreground);
+}
+
+.hero__description,
+.toolbar__message,
+.empty,
+.footer {
+  margin: 0;
+}
+
+.hero__stats {
+  display: grid;
+  gap: 0.25rem;
+  text-align: right;
+  font-size: 0.95rem;
+}
+
+.composer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.filters {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.todo {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px solid var(--ui-border);
+}
+
+.todo:first-child {
+  border-top: 0;
+}
+
+.todo__label {
+  line-height: 1.4;
+}
+
+.todo.is-done .todo__label {
+  color: var(--ui-muted-foreground);
+  text-decoration: line-through;
+}
+
+.todo__remove {
+  display: flex;
+  justify-self: end;
+}
+
+.empty {
+  padding: 4px 0 0;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid var(--ui-border);
+  padding-top: 16px;
+}
+
+.toolbar__message.is-error {
+  color: var(--ui-destructive);
+}
+
+[hidden] {
+  display: none !important;
+}

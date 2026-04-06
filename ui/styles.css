@@ -1,0 +1,584 @@
+:root {
+  --ui-radius: 0.625rem;
+  --ui-background: oklch(1 0 0);
+  --ui-foreground: oklch(0.145 0 0);
+  --ui-card: oklch(1 0 0);
+  --ui-card-foreground: oklch(0.145 0 0);
+  --ui-popover: oklch(1 0 0);
+  --ui-popover-foreground: oklch(0.145 0 0);
+  --ui-primary: oklch(0.205 0 0);
+  --ui-primary-foreground: oklch(0.985 0 0);
+  --ui-secondary: oklch(0.97 0 0);
+  --ui-secondary-foreground: oklch(0.205 0 0);
+  --ui-muted: oklch(0.97 0 0);
+  --ui-muted-foreground: oklch(0.556 0 0);
+  --ui-accent: oklch(0.97 0 0);
+  --ui-accent-foreground: oklch(0.205 0 0);
+  --ui-destructive: oklch(0.577 0.245 27.325);
+  --ui-destructive-foreground: oklch(0.97 0.01 17);
+  --ui-border: oklch(0.922 0 0);
+  --ui-input: oklch(0.922 0 0);
+  --ui-ring: oklch(0.708 0 0);
+  --ui-selection: oklch(0.145 0 0);
+  --ui-selection-foreground: oklch(1 0 0);
+  --ui-shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --ui-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --ui-transition: 150ms ease;
+  color-scheme: light;
+}
+
+.dark {
+  --ui-background: oklch(0.145 0 0);
+  --ui-foreground: oklch(0.985 0 0);
+  --ui-card: oklch(0.205 0 0);
+  --ui-card-foreground: oklch(0.985 0 0);
+  --ui-popover: oklch(0.205 0 0);
+  --ui-popover-foreground: oklch(0.985 0 0);
+  --ui-primary: oklch(0.922 0 0);
+  --ui-primary-foreground: oklch(0.205 0 0);
+  --ui-secondary: oklch(0.269 0 0);
+  --ui-secondary-foreground: oklch(0.985 0 0);
+  --ui-muted: oklch(0.269 0 0);
+  --ui-muted-foreground: oklch(0.708 0 0);
+  --ui-accent: oklch(0.269 0 0);
+  --ui-accent-foreground: oklch(0.985 0 0);
+  --ui-destructive: oklch(0.704 0.191 22.216);
+  --ui-destructive-foreground: oklch(0.98 0 0);
+  --ui-border: oklch(1 0 0 / 10%);
+  --ui-input: oklch(1 0 0 / 15%);
+  --ui-ring: oklch(0.556 0 0);
+  --ui-selection: oklch(0.922 0 0);
+  --ui-selection-foreground: oklch(0.205 0 0);
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light):not([data-theme="light"]) {
+    --ui-background: oklch(0.145 0 0);
+    --ui-foreground: oklch(0.985 0 0);
+    --ui-card: oklch(0.205 0 0);
+    --ui-card-foreground: oklch(0.985 0 0);
+    --ui-popover: oklch(0.205 0 0);
+    --ui-popover-foreground: oklch(0.985 0 0);
+    --ui-primary: oklch(0.922 0 0);
+    --ui-primary-foreground: oklch(0.205 0 0);
+    --ui-secondary: oklch(0.269 0 0);
+    --ui-secondary-foreground: oklch(0.985 0 0);
+    --ui-muted: oklch(0.269 0 0);
+    --ui-muted-foreground: oklch(0.708 0 0);
+    --ui-accent: oklch(0.269 0 0);
+    --ui-accent-foreground: oklch(0.985 0 0);
+    --ui-destructive: oklch(0.704 0.191 22.216);
+    --ui-destructive-foreground: oklch(0.98 0 0);
+    --ui-border: oklch(1 0 0 / 10%);
+    --ui-input: oklch(1 0 0 / 15%);
+    --ui-ring: oklch(0.556 0 0);
+    --ui-selection: oklch(0.922 0 0);
+    --ui-selection-foreground: oklch(0.205 0 0);
+    color-scheme: dark;
+  }
+}
+
+* {
+  border-color: var(--ui-border);
+  outline-color: color-mix(in oklab, var(--ui-ring) 50%, transparent);
+}
+
+::selection {
+  background: var(--ui-selection);
+  color: var(--ui-selection-foreground);
+}
+
+.ui-button,
+.ui-input,
+.ui-textarea,
+.ui-select,
+.ui-checkbox,
+.ui-dialog {
+  font: inherit;
+}
+
+.ui-button,
+.ui-input,
+.ui-textarea,
+.ui-select,
+.ui-checkbox,
+.ui-badge {
+  outline: none;
+}
+
+.ui-button,
+.ui-input,
+.ui-textarea,
+.ui-select,
+.ui-badge,
+.ui-checkbox {
+  transition:
+    color var(--ui-transition),
+    background-color var(--ui-transition),
+    border-color var(--ui-transition),
+    box-shadow var(--ui-transition),
+    opacity var(--ui-transition);
+}
+
+.ui-button:focus-visible,
+.ui-input:focus-visible,
+.ui-textarea:focus-visible,
+.ui-select:focus-visible,
+.ui-checkbox:focus-visible,
+.ui-badge:focus-visible,
+.ui-dialog:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ui-ring) 50%, transparent);
+}
+
+.ui-icon {
+  display: block;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  pointer-events: none;
+}
+
+.ui-button {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  border-radius: calc(var(--ui-radius) - 0.125rem);
+  background: transparent;
+  color: var(--ui-foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1;
+  user-select: none;
+  cursor: pointer;
+}
+
+.ui-button:disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.ui-button:active {
+  opacity: 0.9;
+}
+
+.ui-button--default {
+  background: var(--ui-primary);
+  color: var(--ui-primary-foreground);
+}
+
+.ui-button--default:hover {
+  background: color-mix(in oklab, var(--ui-primary) 90%, transparent);
+}
+
+.ui-button--destructive {
+  background: var(--ui-destructive);
+  color: white;
+}
+
+.ui-button--destructive:hover {
+  background: color-mix(in oklab, var(--ui-destructive) 90%, transparent);
+}
+
+.ui-button--outline {
+  border-color: var(--ui-border);
+  background: var(--ui-background);
+  box-shadow: var(--ui-shadow-xs);
+}
+
+.ui-button--outline:hover {
+  background: var(--ui-accent);
+  color: var(--ui-accent-foreground);
+}
+
+.ui-button--secondary {
+  background: var(--ui-secondary);
+  color: var(--ui-secondary-foreground);
+}
+
+.ui-button--secondary:hover {
+  background: color-mix(in oklab, var(--ui-secondary) 80%, transparent);
+}
+
+.ui-button--ghost:hover {
+  background: var(--ui-accent);
+  color: var(--ui-accent-foreground);
+}
+
+.ui-button--link {
+  height: auto;
+  padding: 0;
+  color: var(--ui-primary);
+  text-decoration: none;
+  text-underline-offset: 0.25rem;
+}
+
+.ui-button--link:hover {
+  text-decoration: underline;
+}
+
+.ui-button--default,
+.ui-button--outline,
+.ui-button--secondary,
+.ui-button--ghost,
+.ui-button--destructive {
+  height: 2.25rem;
+  padding: 0 1rem;
+}
+
+.ui-button--xs {
+  height: 1.5rem;
+  gap: 0.25rem;
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+}
+
+.ui-button--xs .ui-icon,
+.ui-button--icon-xs .ui-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.ui-button--sm {
+  height: 2rem;
+  gap: 0.375rem;
+  padding: 0 0.75rem;
+}
+
+.ui-button--lg {
+  height: 2.5rem;
+  padding: 0 1.5rem;
+}
+
+.ui-button--icon {
+  width: 2.25rem;
+  padding: 0;
+}
+
+.ui-button--icon-xs {
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+}
+
+.ui-button--icon-sm {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+}
+
+.ui-button--icon-lg {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+}
+
+.ui-input,
+.ui-textarea,
+.ui-select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--ui-input);
+  background: transparent;
+  color: var(--ui-foreground);
+  border-radius: calc(var(--ui-radius) - 0.125rem);
+  box-shadow: var(--ui-shadow-xs);
+}
+
+.ui-input,
+.ui-select {
+  height: 2.25rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 1rem;
+}
+
+.ui-textarea {
+  min-height: 6rem;
+  padding: 0.5rem 0.75rem;
+  resize: vertical;
+  font-size: 1rem;
+}
+
+@media (min-width: 768px) {
+  .ui-input,
+  .ui-select,
+  .ui-textarea {
+    font-size: 0.875rem;
+  }
+}
+
+.ui-input::placeholder,
+.ui-textarea::placeholder {
+  color: var(--ui-muted-foreground);
+}
+
+.dark .ui-input,
+.dark .ui-textarea,
+.dark .ui-select {
+  background: color-mix(in oklab, var(--ui-input) 30%, transparent);
+}
+
+.ui-input:disabled,
+.ui-textarea:disabled,
+.ui-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ui-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  display: grid;
+  place-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--ui-input);
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: var(--ui-shadow-xs);
+  color: var(--ui-primary-foreground);
+  cursor: pointer;
+}
+
+.ui-checkbox::before {
+  content: "";
+  width: 0.875rem;
+  height: 0.875rem;
+  background: currentColor;
+  transform: scale(0);
+  transition: transform var(--ui-transition);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.ui-checkbox:checked {
+  border-color: var(--ui-primary);
+  background: var(--ui-primary);
+}
+
+.ui-checkbox:checked::before {
+  transform: scale(1);
+}
+
+.ui-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ui-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  border: 1px solid var(--ui-border);
+  border-radius: calc(var(--ui-radius) + 0.125rem);
+  background: var(--ui-card);
+  color: var(--ui-card-foreground);
+  padding-block: 1.5rem;
+  box-shadow: var(--ui-shadow-sm);
+}
+
+.ui-card__header {
+  display: grid;
+  grid-auto-rows: min-content;
+  grid-template-rows: auto auto;
+  align-items: start;
+  gap: 0.5rem;
+  padding-inline: 1.5rem;
+}
+
+.ui-card__body {
+  padding-inline: 1.5rem;
+}
+
+.ui-card__footer {
+  display: flex;
+  align-items: center;
+  padding-inline: 1.5rem;
+}
+
+.ui-card__eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border-radius: 999px;
+  color: var(--ui-muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.ui-card__title,
+.ui-dialog__title {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.ui-card__description,
+.ui-dialog__description,
+.ui-field__description {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ui-muted-foreground);
+}
+
+.ui-field {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.ui-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.ui-field__error {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ui-destructive);
+}
+
+.ui-badge {
+  display: inline-flex;
+  width: fit-content;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.ui-badge .ui-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.ui-badge--default {
+  background: var(--ui-primary);
+  color: var(--ui-primary-foreground);
+}
+
+.ui-badge--default:hover {
+  background: color-mix(in oklab, var(--ui-primary) 90%, transparent);
+}
+
+.ui-badge--secondary {
+  background: var(--ui-secondary);
+  color: var(--ui-secondary-foreground);
+}
+
+.ui-badge--secondary:hover {
+  background: color-mix(in oklab, var(--ui-secondary) 90%, transparent);
+}
+
+.ui-badge--destructive {
+  background: var(--ui-destructive);
+  color: white;
+}
+
+.ui-badge--destructive:hover {
+  background: color-mix(in oklab, var(--ui-destructive) 90%, transparent);
+}
+
+.ui-badge--outline {
+  border-color: var(--ui-border);
+  color: var(--ui-foreground);
+}
+
+.ui-badge--outline:hover,
+.ui-badge--ghost:hover {
+  background: var(--ui-accent);
+  color: var(--ui-accent-foreground);
+}
+
+.ui-badge--link {
+  color: var(--ui-primary);
+  text-decoration: none;
+}
+
+.ui-badge--link:hover {
+  text-decoration: underline;
+}
+
+.ui-separator {
+  flex-shrink: 0;
+  background: var(--ui-border);
+}
+
+.ui-separator--horizontal {
+  width: 100%;
+  height: 1px;
+}
+
+.ui-separator--vertical {
+  width: 1px;
+  height: 100%;
+}
+
+.ui-dialog {
+  width: 100%;
+  max-width: min(32rem, calc(100vw - 2rem));
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.ui-dialog::backdrop {
+  background: color-mix(in oklab, var(--ui-foreground) 24%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.ui-dialog__surface,
+.ui-popover {
+  border: 1px solid var(--ui-border);
+  border-radius: calc(var(--ui-radius) + 0.125rem);
+  background: var(--ui-popover);
+  color: var(--ui-popover-foreground);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.ui-dialog__surface {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.ui-dialog__header,
+.ui-dialog__footer,
+.ui-dialog__body {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.ui-popover {
+  padding: 0.25rem;
+}
+
+.ui-dialog[data-state="open"],
+.ui-popover[data-state="open"] {
+  animation: ui-fade-in 150ms ease-out;
+}
+
+@keyframes ui-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
