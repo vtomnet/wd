@@ -1,3 +1,5 @@
+import { SHADCN_ROOT, mountComparison, renderReact } from "./_util.js";
+
 export const name = "separator";
 
 export const scenarios = [
@@ -6,29 +8,29 @@ export const scenarios = [
 ];
 
 export async function mount({ root, impl, scenario }) {
-  root.className = "ref-root";
-  if (impl === "ours") {
-    const { separator } = await import("../../index.js");
-    const element = separator({ orientation: scenario });
-    if (scenario === "vertical") {
-      element.style.height = "64px";
-    } else {
-      element.style.width = "240px";
-    }
-    element.setAttribute("data-test-target", "");
-    root.append(element);
-    return;
-  }
+  await mountComparison(root, impl, {
+    async ours() {
+      const { separator } = await import("../../index.js");
+      const element = separator({ orientation: scenario });
+      if (scenario === "vertical") {
+        element.style.height = "64px";
+      } else {
+        element.style.width = "240px";
+      }
+      return element;
+    },
 
-  const [React, { renderReact }, { Separator }] = await Promise.all([
-    import("react"),
-    import("../render.js"),
-    import("shadcn-ui-upstream/apps/v4/registry/new-york-v4/ui/separator.tsx"),
-  ]);
+    async reference() {
+      const [React, { Separator }] = await Promise.all([
+        import("react"),
+        import(/* @vite-ignore */ `${SHADCN_ROOT}/separator.tsx`),
+      ]);
 
-  await renderReact(root, React.createElement(Separator, {
-    orientation: scenario,
-    style: scenario === "vertical" ? { height: "64px" } : { width: "240px" },
-    "data-test-target": "",
-  }));
+      await renderReact(root, React.createElement(Separator, {
+        orientation: scenario,
+        style: scenario === "vertical" ? { height: "64px" } : { width: "240px" },
+        "data-test-target": "",
+      }));
+    },
+  });
 }

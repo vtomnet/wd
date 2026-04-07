@@ -1,3 +1,5 @@
+import { SHADCN_ROOT, focusTarget, mountComparison, renderReact } from "./_util.js";
+
 export const name = "input";
 
 export const scenarios = [
@@ -7,38 +9,34 @@ export const scenarios = [
 ];
 
 export async function mount({ root, impl, scenario }) {
-  root.className = "ref-root";
-  if (impl === "ours") {
-    const { input } = await import("../../index.js");
-    const element = input({ placeholder: "Email address" });
-    element.style.width = "240px";
-    applyState(element, scenario);
-    element.setAttribute("data-test-target", "");
-    root.append(element);
-    return;
-  }
+  await mountComparison(root, impl, {
+    async ours() {
+      const { input } = await import("../../index.js");
+      const element = input({ placeholder: "Email address" });
+      element.style.width = "240px";
+      applyState(element, scenario);
+      return element;
+    },
 
-  const [React, { renderReact, nextFrame }, { Input }] = await Promise.all([
-    import("react"),
-    import("../render.js"),
-    import("shadcn-ui-upstream/apps/v4/registry/new-york-v4/ui/input.tsx"),
-  ]);
+    async reference() {
+      const [React, { Input }] = await Promise.all([
+        import("react"),
+        import(/* @vite-ignore */ `${SHADCN_ROOT}/input.tsx`),
+      ]);
 
-  await renderReact(root, React.createElement(Input, {
-    placeholder: "Email address",
-    style: { width: "240px" },
-    defaultValue: scenario === "disabled" ? "hello@example.com" : undefined,
-    disabled: scenario === "disabled",
-    "data-test-target": "",
-  }));
+      await renderReact(root, React.createElement(Input, {
+        placeholder: "Email address",
+        style: { width: "240px" },
+        defaultValue: scenario === "disabled" ? "hello@example.com" : undefined,
+        disabled: scenario === "disabled",
+        "data-test-target": "",
+      }));
 
-  if (scenario === "focus") {
-    const element = root.querySelector("[data-test-target]");
-    if (element instanceof HTMLElement) {
-      element.focus();
-      await nextFrame();
-    }
-  }
+      if (scenario === "focus") {
+        await focusTarget(root);
+      }
+    },
+  });
 }
 
 function applyState(element, scenario) {

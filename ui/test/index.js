@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import puppeteer from "puppeteer";
 import { PNG } from "pngjs";
@@ -10,6 +10,7 @@ import { createServer as createViteServer } from "vite";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const artifactsDir = path.join(__dirname, "artifacts");
 const viteConfigPath = path.join(__dirname, "vite.config.mjs");
+const componentsDir = path.join(__dirname, "components");
 
 /**
  * @param {number} value
@@ -130,18 +131,9 @@ export async function screenshotFixture(browser, options) {
  * @param {import('puppeteer').Page} page
  */
 async function waitForFixture(page) {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    try {
-      await page.waitForFunction(() => window.__fixtureReady === true, { timeout: 15000 });
-      await page.waitForSelector("[data-test-target]", { timeout: 15000 });
-      return;
-    } catch (error) {
-      if (attempt === 2) {
-        throw error;
-      }
-      await page.reload({ waitUntil: "domcontentloaded" });
-    }
-  }
+  await page.waitForFunction(() => window.__fixtureReady === true, { timeout: 10000 });
+  await page.waitForSelector("[data-test-target]", { timeout: 10000 });
+  return;
 }
 
 /**
@@ -160,7 +152,7 @@ export async function comparePng(ours, reference, options) {
     return {
       ok: false,
       reason: `size mismatch ${oursImage.width}x${oursImage.height} vs ${referenceImage.width}x${referenceImage.height}`,
-      diffPixels: Infinity,
+      diffPixels: null,
     };
   }
 
@@ -193,7 +185,90 @@ export async function comparePng(ours, reference, options) {
 
 export function formatCase(result) {
   if (result.ok) {
-    return `${color.green("PASS")} ${result.name} ${color.dim(`(${pad(result.diffPixels ?? 0)} px)` )}`;
+    return `${color.green("PASS")} ${result.name} ${color.dim(`(${pad(result.diffPixels ?? 0)} px)`)}`;
   }
-  return `${color.red("FAIL")} ${result.name} ${color.dim(`(${result.diffPixels} px diff)`)}${result.reason ? ` ${color.yellow(result.reason)}` : ""}`;
+  const detail = Number.isFinite(result.diffPixels)
+    ? `(${result.diffPixels} px diff)`
+    : "(size mismatch)";
+  return `${color.red("FAIL")} ${result.name} ${color.dim(detail)}${result.reason ? ` ${color.yellow(result.reason)}` : ""}`;
 }
+
+async function main() {
+  const files = (await fs.readdir(componentsDir))
+    .filter((file) => file.endsWith(".js") && !file.startsWith("_"))
+    .sort();
+
+  const server = await startServer();
+  try {
+    const suites = [];
+    for (const file of files) {
+      if (file.indexOf("button") === -1) continue;
+      const moduleUrl = pathToFileURL(path.join(componentsDir, file)).href;
+      const mod = await import(moduleUrl);
+      suites.push({
+        file,
+        name: mod.name ?? file.replace(/\.js$/, ""),
+        modulePath: `/components/${file}`,
+        scenarios: mod.scenarios ?? [],
+      });
+    }
+
+    const results = await withBrowser(async (browser) => {
+      const output = [];
+      for (const suite of suites) {
+        console.log(color.dim(`\n# ${suite.name}`));
+        for (const scenario of suite.scenarios) {
+          const states = scenario.states ?? ["idle"];
+          const themes = scenario.themes ?? ["light", "dark"];
+          const maxDiffPixels = scenario.maxDiffPixels ?? 0;
+          for (const theme of themes) {
+            for (const state of states) {
+              const caseName = `${suite.name}:${scenario.name}:${theme}:${state}`;
+              const ours = await screenshotFixture(browser, {
+                baseUrl: server.baseUrl,
+                modulePath: suite.modulePath,
+                impl: "ours",
+                scenario: scenario.name,
+                state,
+                theme,
+              });
+              const reference = await screenshotFixture(browser, {
+                baseUrl: server.baseUrl,
+                modulePath: suite.modulePath,
+                impl: "reference",
+                scenario: scenario.name,
+                state,
+                theme,
+              });
+              const comparison = await comparePng(ours, reference, {
+                name: caseName,
+                maxDiffPixels,
+              });
+              const result = {
+                ...comparison,
+                name: caseName,
+              };
+              output.push(result);
+              console.log(formatCase(result));
+            }
+          }
+        }
+      }
+      return output;
+    });
+
+    const failed = results.filter((result) => !result.ok);
+    const passed = results.length - failed.length;
+    console.log(`\n${color.green(String(passed))} passed, ${failed.length > 0 ? color.red(String(failed.length)) : "0"} failed`);
+    if (failed.length > 0) {
+      process.exitCode = 1;
+    }
+  } finally {
+    await server.close();
+  }
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

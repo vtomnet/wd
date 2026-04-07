@@ -1,3 +1,5 @@
+import { SHADCN_ROOT, focusTarget, mountComparison, renderReact } from "./_util.js";
+
 export const name = "checkbox";
 
 export const scenarios = [
@@ -8,36 +10,32 @@ export const scenarios = [
 ];
 
 export async function mount({ root, impl, scenario }) {
-  root.className = "ref-root";
-  if (impl === "ours") {
-    const { checkbox } = await import("../../index.js");
-    const element = checkbox({ ariaLabel: "Accept terms" });
-    applyState(element, scenario);
-    element.setAttribute("data-test-target", "");
-    root.append(element);
-    return;
-  }
+  await mountComparison(root, impl, {
+    async ours() {
+      const { checkbox } = await import("../../index.js");
+      const element = checkbox({ ariaLabel: "Accept terms" });
+      applyState(element, scenario);
+      return element;
+    },
 
-  const [React, { renderReact, nextFrame }, { Checkbox }] = await Promise.all([
-    import("react"),
-    import("../render.js"),
-    import("shadcn-ui-upstream/apps/v4/registry/new-york-v4/ui/checkbox.tsx"),
-  ]);
+    async reference() {
+      const [React, { Checkbox }] = await Promise.all([
+        import("react"),
+        import(/* @vite-ignore */ `${SHADCN_ROOT}/checkbox.tsx`),
+      ]);
 
-  await renderReact(root, React.createElement(Checkbox, {
-    "aria-label": "Accept terms",
-    defaultChecked: scenario === "checked" || scenario === "disabled",
-    disabled: scenario === "disabled",
-    "data-test-target": "",
-  }));
+      await renderReact(root, React.createElement(Checkbox, {
+        "aria-label": "Accept terms",
+        defaultChecked: scenario === "checked" || scenario === "disabled",
+        disabled: scenario === "disabled",
+        "data-test-target": "",
+      }));
 
-  if (scenario === "focus") {
-    const element = root.querySelector("[data-test-target]");
-    if (element instanceof HTMLElement) {
-      element.focus();
-      await nextFrame();
-    }
-  }
+      if (scenario === "focus") {
+        await focusTarget(root);
+      }
+    },
+  });
 }
 
 function applyState(element, scenario) {

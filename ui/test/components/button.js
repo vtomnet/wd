@@ -1,3 +1,5 @@
+import { SHADCN_ROOT, mountComparison, renderReact } from "./_util.js";
+
 export const name = "button";
 
 export const scenarios = [
@@ -12,39 +14,38 @@ export const scenarios = [
 ];
 
 export async function mount({ root, impl, scenario }) {
-  root.className = "ref-root";
-  if (impl === "ours") {
-    const [{ button, icon }, { plus }] = await Promise.all([
-      import("../../index.js"),
-      import("../../icons/index.js"),
-    ]);
-    const element = renderOurs(button, icon, plus, scenario);
-    element.setAttribute("data-test-target", "");
-    root.append(element);
-    return;
-  }
+  await mountComparison(root, impl, {
+    async ours() {
+      const [{ button, icon }, { plus }] = await Promise.all([
+        import("../../index.js"),
+        import("../../icons/index.js"),
+      ]);
+      return renderOurs(button, icon, plus, scenario);
+    },
 
-  const [React, { renderReact }, { Button }, { PlusIcon }] = await Promise.all([
-    import("react"),
-    import("../render.js"),
-    import("shadcn-ui-upstream/apps/v4/registry/new-york-v4/ui/button.tsx"),
-    import("lucide-react"),
-  ]);
+    async reference() {
+      const [React, { Button }, { PlusIcon }] = await Promise.all([
+        import("react"),
+        import(/* @vite-ignore */ `${SHADCN_ROOT}/button.tsx`),
+        import("lucide-react"),
+      ]);
 
-  const props = buttonProps(scenario);
-  const iconNode = scenario === "icon-sm" || scenario === "with-icon"
-    ? React.createElement(PlusIcon)
-    : null;
-  const children = scenario === "icon-sm"
-    ? iconNode
-    : scenario === "with-icon"
-      ? [iconNode, "New"]
-      : labelFor(scenario);
+      const props = buttonProps(scenario);
+      const iconNode = scenario === "icon-sm" || scenario === "with-icon"
+        ? React.createElement(PlusIcon)
+        : null;
+      const children = scenario === "icon-sm"
+        ? iconNode
+        : scenario === "with-icon"
+          ? [iconNode, "New"]
+          : labelFor(scenario);
 
-  await renderReact(root, React.createElement(Button, {
-    ...props,
-    "data-test-target": "",
-  }, children));
+      await renderReact(root, React.createElement(Button, {
+        ...props,
+        "data-test-target": "",
+      }, children));
+    },
+  });
 }
 
 function renderOurs(button, icon, plus, scenario) {
