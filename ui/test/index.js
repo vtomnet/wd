@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 import puppeteer from "puppeteer";
 import { PNG } from "pngjs";
@@ -10,7 +10,6 @@ import { createServer as createViteServer } from "vite";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const artifactsDir = path.join(__dirname, "artifacts");
 const viteConfigPath = path.join(__dirname, "vite.config.mjs");
-const componentsDir = path.join(__dirname, "components");
 
 /**
  * @param {number} value
@@ -106,7 +105,7 @@ export async function createFixtureRunner(browser, options) {
           pseudoState: caseItem.pseudoState,
         })),
       });
-      await waitForFixture(page);
+      await page.waitForFunction(() => window.__fixtureReady === true, { timeout: 10000 });
       await forcePseudoStates(session, rendered.cases);
       await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve())));
 
@@ -123,13 +122,6 @@ export async function createFixtureRunner(browser, options) {
       await page.close();
     },
   };
-}
-
-/**
- * @param {import('puppeteer').Page} page
- */
-async function waitForFixture(page) {
-  await page.waitForFunction(() => window.__fixtureReady === true, { timeout: 10000 });
 }
 
 /**
@@ -250,6 +242,16 @@ function normalizeRect(rect, image) {
   };
 }
 
+async function loadSuite(file, modPromise) {
+  const mod = await modPromise;
+  return {
+    file,
+    name: mod.name ?? file.replace(/\.js$/, ""),
+    modulePath: `/components/${file}`,
+    scenarios: mod.scenarios ?? [],
+  };
+}
+
 function cropImage(rect, image) {
   const output = new PNG({ width: rect.width, height: rect.height });
   for (let row = 0; row < rect.height; row += 1) {
@@ -263,13 +265,9 @@ function cropImage(rect, image) {
 
 let artifactsDirReady = null;
 
-async function ensureArtifactsDir() {
+async function writeArtifacts(name, files) {
   artifactsDirReady ??= fs.mkdir(artifactsDir, { recursive: true });
   await artifactsDirReady;
-}
-
-async function writeArtifacts(name, files) {
-  await ensureArtifactsDir();
   await Promise.all(files.map((file) => fs.writeFile(path.join(artifactsDir, `${name}.${file.suffix}.png`), file.content)));
 }
 
@@ -373,23 +371,16 @@ export function formatCase(result) {
 }
 
 async function main() {
-  const files = (await fs.readdir(componentsDir))
-    .filter((file) => file.endsWith(".js") && !file.startsWith("_"))
-    .sort();
-
   const server = await startServer();
   try {
-    const suites = [];
-    for (const file of files) {
-      const moduleUrl = pathToFileURL(path.join(componentsDir, file)).href;
-      const mod = await import(moduleUrl);
-      suites.push({
-        file,
-        name: mod.name ?? file.replace(/\.js$/, ""),
-        modulePath: `/components/${file}`,
-        scenarios: mod.scenarios ?? [],
-      });
-    }
+    const suites = await Promise.all([
+      loadSuite("badge.js", import("./components/badge.js")),
+      loadSuite("button.js", import("./components/button.js")),
+      loadSuite("card.js", import("./components/card.js")),
+      loadSuite("checkbox.js", import("./components/checkbox.js")),
+      loadSuite("input.js", import("./components/input.js")),
+      loadSuite("separator.js", import("./components/separator.js")),
+    ]);
 
     const results = await withBrowser(async (browser) => {
       const output = [];
