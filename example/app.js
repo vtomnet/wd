@@ -1,4 +1,4 @@
-import { batch, bind, computed, effect, keyed, resource, scope, signal, template } from "./runtime/index.js";
+import { batch, bind, computed, effect, keyed, resource, scope, signal, template } from "./rt/index.js";
 import { button, card, checkbox, icon, input } from "./ui/index.js";
 import { plus, trash2 } from "./ui/icons/index.js";
 

@@ -8,7 +8,7 @@ The premise is simple. Modern browser primitives are much better than they were 
 
 This repository currently has three layers.
 
-`runtime/` is the retained-DOM runtime. It handles state, lifecycle, binding, list reconciliation, routing, and layout-sensitive scheduling.
+`rt/` is the retained-DOM runtime. It handles state, lifecycle, binding, list reconciliation, routing, and layout-sensitive scheduling.
 
 `ui-core/` is the behavior layer. It is intentionally small and sticks closely to the platform. It provides behavior primitives such as dialog and popover control, and it stays usable from plain DOM code without depending on the runtime.
 
@@ -64,30 +64,30 @@ At the UI layer, if the same control markup or control styling appears twice, it
 
 The runtime is the structural layer. Its job is to make retained-DOM code predictable and hard to misuse.
 
-`runtime/scope.js` provides lifecycle, cleanup, listeners, timers, observers, and fetch helpers.
+`rt/scope.js` provides lifecycle, cleanup, listeners, timers, observers, and fetch helpers.
 
-`runtime/signal.js` provides `signal`, `computed`, `effect`, `batch`, and `untrack`. The current version includes a fix for resubscribe-during-flush loops by snapshotting subscriber sets before scheduling.
+`rt/signal.js` provides `signal`, `computed`, `effect`, `batch`, and `untrack`. The current version includes a fix for resubscribe-during-flush loops by snapshotting subscriber sets before scheduling.
 
-`runtime/template.js` clones static DOM and collects `data-ref` references.
+`rt/template.js` clones static DOM and collects `data-ref` references.
 
-`runtime/bind.js` performs direct text, property, attribute, class, style, checked, input, and safe HTML binding.
+`rt/bind.js` performs direct text, property, attribute, class, style, checked, input, and safe HTML binding.
 
-`runtime/list.js` provides keyed list reconciliation with per-row scopes.
+`rt/list.js` provides keyed list reconciliation with per-row scopes.
 
-`runtime/region.js` swaps one owned subtree for another.
+`rt/region.js` swaps one owned subtree for another.
 
-`runtime/frame.js` provides explicit read and write phases for layout-sensitive code.
+`rt/frame.js` provides explicit read and write phases for layout-sensitive code.
 
-`runtime/overlay.js` positions simple anchored overlays.
+`rt/overlay.js` positions simple anchored overlays.
 
-`runtime/resource.js` wraps cancellable async resource state.
+`rt/resource.js` wraps cancellable async resource state.
 
-`runtime/router.js` wraps the History API.
+`rt/router.js` wraps the History API.
 
 A typical retained-DOM view looks like this:
 
 ```js
-import { bind, keyed, scope, signal, template } from "./runtime/index.js";
+import { bind, keyed, scope, signal, template } from "./rt/index.js";
 
 const panelTpl = template(`
   <section class="panel" data-ref="root">
