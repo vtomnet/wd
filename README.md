@@ -1,7 +1,8 @@
 # wd 🪵
 
 `wd` is a small no-framework Web Platform UI experiment.
-(NB: everything below is slop.)
+
+⚠️ everything below is slop ⚠️
 
 The premise is simple. Modern browser primitives are much better than they were a decade ago, and coding agents are now capable of writing large amounts of local code quickly. That changes the tradeoff. Instead of reaching first for a large framework, a compiler, and a large component ecosystem, this project asks whether a small amount of disciplined utility code can provide enough structure to build real apps while keeping the code on disk close to the code that runs in the browser.
 
@@ -11,7 +12,7 @@ This repository currently has three layers.
 
 `ui-core/` is the behavior layer. It is intentionally small and sticks closely to the platform. It provides behavior primitives such as dialog and popover control, and it stays usable from plain DOM code without depending on the runtime.
 
-`ui/` is the styled component layer. It provides a small set of default controls and surfaces with ordinary DOM and ordinary CSS. It is meant to reduce repeated brittle markup and style drift, not to create a DSL.
+`ui/` is the styled component layer. It provides a small set of default controls and surfaces with ordinary DOM and ordinary CSS. It is meant to reduce repeated brittle markup and style drift, not to create a DSL. It is intended to be a pixel perfect clone of shadcn/ui.
 
 `example/` is a simple server-client todo app that exercises the current stack.
 

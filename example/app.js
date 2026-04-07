@@ -44,16 +44,17 @@ heroStats.append(heroSummary, heroSyncStatus);
 const hero = document.createElement("section");
 hero.className = "hero";
 const heroText = document.createElement("div");
-const heroBadge = badge({ label: "Example", variant: "secondary" });
 const heroTitle = document.createElement("h1");
 heroTitle.className = "hero__title";
-heroTitle.textContent = "Todo";
+heroTitle.textContent = "todo app";
 const heroDescription = document.createElement("p");
 heroDescription.className = "hero__description";
 heroDescription.textContent = "Simple server-client example using wd runtime and ui primitives.";
-heroText.append(heroBadge, heroTitle, heroDescription);
+heroText.append(heroTitle, heroDescription);
 hero.append(heroText, heroStats);
 app.append(card({ body: hero }).root);
+
+const SYNCING_MESSAGE_DELAY_MS = 300;
 
 const composerForm = document.createElement("form");
 composerForm.className = "composer";
@@ -106,6 +107,7 @@ const draft = signal("");
 const filter = signal("all");
 const mutationCount = signal(0);
 const errorMessage = signal("");
+const syncingVisible = signal(false);
 
 const todosQuery = resource(page, async (abortSignal) => {
   const response = await fetch("/api/todos", { signal: abortSignal });
@@ -227,10 +229,10 @@ bind.text(heroSummary, () => {
   return `${total} total • ${activeCount()} active • ${completedCount()} done`;
 }, { scope: page });
 
-bind.text(heroSyncStatus, () => busy() ? "Syncing…" : "Synced", { scope: page });
+bind.text(heroSyncStatus, () => syncingVisible() ? "Syncing…" : "Synced", { scope: page });
 bind.input(draftInput, draft, { scope: page });
 bind.prop(submitButton, "disabled", () => busy() || draft().trim().length === 0, { scope: page });
-bind.text(toolbarMessage, () => errorMessage() || (busy() ? "Working…" : ""), { scope: page });
+bind.text(toolbarMessage, errorMessage, { scope: page });
 bind.classToggle(toolbarMessage, "is-error", () => errorMessage().length > 0, { scope: page });
 bind.show(empty, () => visibleTodos().length === 0, { scope: page });
 bind.text(footerSummary, () => {
@@ -305,4 +307,16 @@ effect(() => {
       }
     });
   }
+}, { scope: page });
+
+effect(() => {
+  syncingVisible.set(false);
+  if (!busy()) {
+    return;
+  }
+  return page.timeout(SYNCING_MESSAGE_DELAY_MS, () => {
+    if (busy()) {
+      syncingVisible.set(true);
+    }
+  });
 }, { scope: page });
