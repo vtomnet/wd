@@ -20,8 +20,8 @@ export function button(options = {}) {
   root.type = options.type ?? "button";
   root.className = classes(
     "ui-button",
-    `ui-button--${options.variant ?? "default"}`,
-    `ui-button--${size}`,
+    `ui-button--variant-${options.variant ?? "default"}`,
+    `ui-button--size-${size}`,
     options.className,
   );
   root.disabled = options.disabled ?? false;
