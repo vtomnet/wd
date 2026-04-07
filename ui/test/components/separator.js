@@ -1,4 +1,4 @@
-import { SHADCN_ROOT, mountComparison, renderReact } from "./_util.js";
+import { SHADCN_ROOT, createSuiteFrame, createSuiteGrid, renderReact, suiteFrameProps } from "./_util.js";
 
 export const name = "separator";
 
@@ -7,30 +7,63 @@ export const scenarios = [
   { name: "vertical", states: ["idle"], themes: ["light", "dark"] },
 ];
 
-export async function mount({ root, impl, scenario }) {
-  await mountComparison(root, impl, {
-    async ours() {
-      const { separator } = await import("../../index.js");
-      const element = separator({ orientation: scenario });
-      if (scenario === "vertical") {
-        element.style.height = "64px";
-      } else {
-        element.style.width = "240px";
-      }
-      return element;
-    },
+export async function renderSuite({ root, impl, cases, columns }) {
+  if (impl === "ours") {
+    const { separator } = await import("../../separator.js");
+    const grid = createSuiteGrid(root, columns);
 
-    async reference() {
-      const [React, { Separator }] = await Promise.all([
-        import("react"),
-        import(/* @vite-ignore */ `${SHADCN_ROOT}/separator.tsx`),
-      ]);
+    for (const caseItem of cases) {
+      const frame = createSuiteFrame(caseItem);
+      const element = separator({ orientation: caseItem.scenario });
+      applySize(element, caseItem.scenario);
+      element.setAttribute("data-test-target", "");
+      frame.root.append(element);
+      grid.append(frame.frame);
+    }
+    return;
+  }
 
-      await renderReact(root, React.createElement(Separator, {
-        orientation: scenario,
-        style: scenario === "vertical" ? { height: "64px" } : { width: "240px" },
-        "data-test-target": "",
-      }));
+  const [React, { Separator }] = await Promise.all([
+    import("react"),
+    import(/* @vite-ignore */ `${SHADCN_ROOT}/separator.tsx`),
+  ]);
+
+  return await renderReact(root, React.createElement(
+    "div",
+    {
+      className: "suite-grid",
+      style: { "--suite-columns": String(columns) },
     },
-  });
+    cases.map((caseItem) => React.createElement(
+      "div",
+      {
+        ...suiteFrameProps(caseItem),
+        key: caseItem.id,
+      },
+      React.createElement(
+        "div",
+        { className: "suite-case-root" },
+        React.createElement(Separator, {
+          orientation: caseItem.scenario,
+          style: sizeStyle(caseItem.scenario),
+          "data-test-target": "",
+        }),
+      ),
+    )),
+  ));
+}
+
+function applySize(element, scenario) {
+  if (scenario === "vertical") {
+    element.style.height = "64px";
+    return;
+  }
+  element.style.width = "240px";
+}
+
+function sizeStyle(scenario) {
+  if (scenario === "vertical") {
+    return { height: "64px" };
+  }
+  return { width: "240px" };
 }

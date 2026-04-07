@@ -5,8 +5,6 @@ export async function renderReact(root, element) {
 
   const reactRoot = createRoot(root);
   reactRoot.render(element);
-  await nextFrame();
-  await nextFrame();
   return {
     root: reactRoot,
     unmount() {
@@ -15,31 +13,45 @@ export async function renderReact(root, element) {
   };
 }
 
+export function createSuiteGrid(root, columns) {
+  root.className = "ref-root";
+  root.replaceChildren();
+
+  const grid = document.createElement("div");
+  grid.className = "suite-grid";
+  grid.style.setProperty("--suite-columns", String(columns));
+  root.append(grid);
+  return grid;
+}
+
+export function createSuiteFrame(caseItem) {
+  const frame = document.createElement("div");
+  frame.className = "suite-frame";
+  frame.setAttribute("data-suite-case-id", caseItem.id);
+  frame.setAttribute("data-suite-case-name", caseItem.name);
+  frame.setAttribute("data-suite-case-state", caseItem.pseudoState ?? caseItem.state);
+
+  const caseRoot = document.createElement("div");
+  caseRoot.className = "suite-case-root";
+  frame.append(caseRoot);
+
+  return {
+    frame,
+    root: caseRoot,
+  };
+}
+
+export function suiteFrameProps(caseItem) {
+  return {
+    className: "suite-frame",
+    "data-suite-case-id": caseItem.id,
+    "data-suite-case-name": caseItem.name,
+    "data-suite-case-state": caseItem.pseudoState ?? caseItem.state,
+  };
+}
+
 export function nextFrame() {
   return new Promise((resolve) => {
     requestAnimationFrame(() => resolve());
   });
-}
-
-export async function mountComparison(root, impl, handlers) {
-  root.className = "ref-root";
-
-  if (impl === "ours") {
-    const element = await handlers.ours();
-    element.setAttribute("data-test-target", "");
-    root.append(element);
-    return element;
-  }
-
-  return handlers.reference();
-}
-
-export async function focusTarget(root) {
-  const element = root.querySelector("[data-test-target]");
-  if (!(element instanceof HTMLElement)) {
-    throw new Error("missing [data-test-target]");
-  }
-  element.focus();
-  await nextFrame();
-  return element;
 }

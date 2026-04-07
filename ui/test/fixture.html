@@ -23,8 +23,29 @@
       }
 
       #mount {
+        display: block;
+        padding: 16px;
+      }
+
+      .suite-grid {
+        display: grid;
+        grid-template-columns: repeat(var(--suite-columns, 1), max-content);
+        gap: 32px;
+        align-items: start;
+        justify-items: start;
+      }
+
+      .suite-frame {
         display: inline-grid;
-        padding: 24px;
+        padding: 16px;
+        align-items: start;
+        justify-items: start;
+      }
+
+      .suite-case-root {
+        display: inline-grid;
+        align-items: start;
+        justify-items: start;
       }
     </style>
   </head>

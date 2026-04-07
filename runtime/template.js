@@ -17,7 +17,7 @@ export function template(markup) {
 
   return {
     clone() {
-      const root = /** @type {Element} */ (sourceRoot.cloneNode(true));
+      const root = /** @type {Element} */ (document.importNode(sourceRoot, true));
       const refs = collectRefs(root);
       return { root, refs };
     },

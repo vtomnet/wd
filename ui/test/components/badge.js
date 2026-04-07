@@ -1,4 +1,4 @@
-import { SHADCN_ROOT, mountComparison, renderReact } from "./_util.js";
+import { SHADCN_ROOT, createSuiteFrame, createSuiteGrid, renderReact, suiteFrameProps } from "./_util.js";
 
 export const name = "badge";
 
@@ -8,25 +8,48 @@ export const scenarios = [
   { name: "destructive", states: ["idle"] },
 ];
 
-export async function mount({ root, impl, scenario }) {
-  await mountComparison(root, impl, {
-    async ours() {
-      const { badge } = await import("../../index.js");
-      return badge({ label: labelFor(scenario), variant: scenario });
-    },
+export async function renderSuite({ root, impl, cases, columns }) {
+  if (impl === "ours") {
+    const { badge } = await import("../../badge.js");
+    const grid = createSuiteGrid(root, columns);
 
-    async reference() {
-      const [React, { Badge }] = await Promise.all([
-        import("react"),
-        import(/* @vite-ignore */ `${SHADCN_ROOT}/badge.tsx`),
-      ]);
+    for (const caseItem of cases) {
+      const frame = createSuiteFrame(caseItem);
+      const element = badge({ label: labelFor(caseItem.scenario), variant: caseItem.scenario });
+      element.setAttribute("data-test-target", "");
+      frame.root.append(element);
+      grid.append(frame.frame);
+    }
+    return;
+  }
 
-      await renderReact(root, React.createElement(Badge, {
-        variant: scenario,
-        "data-test-target": "",
-      }, labelFor(scenario)));
+  const [React, { Badge }] = await Promise.all([
+    import("react"),
+    import(/* @vite-ignore */ `${SHADCN_ROOT}/badge.tsx`),
+  ]);
+
+  return await renderReact(root, React.createElement(
+    "div",
+    {
+      className: "suite-grid",
+      style: { "--suite-columns": String(columns) },
     },
-  });
+    cases.map((caseItem) => React.createElement(
+      "div",
+      {
+        ...suiteFrameProps(caseItem),
+        key: caseItem.id,
+      },
+      React.createElement(
+        "div",
+        { className: "suite-case-root" },
+        React.createElement(Badge, {
+          variant: caseItem.scenario,
+          "data-test-target": "",
+        }, labelFor(caseItem.scenario)),
+      ),
+    )),
+  ));
 }
 
 function labelFor(scenario) {

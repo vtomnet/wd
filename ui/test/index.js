@@ -71,60 +71,58 @@ export async function withBrowser(run) {
   }
 }
 
-/**
- * @param {import('puppeteer').Browser} browser
- * @param {{ baseUrl: string, modulePath: string, impl: string, scenario: string, state: string, theme: string }} options
- */
-export async function screenshotFixture(browser, options) {
+export async function createFixtureRunner(browser, options) {
   const page = await browser.newPage();
+  const session = await page.target().createCDPSession();
+  await session.send("DOM.enable");
+  await session.send("CSS.enable");
   await page.setViewport({ width: 800, height: 600, deviceScaleFactor: 1 });
-  await page.emulateMediaFeatures([
-    {
-      name: "prefers-color-scheme",
-      value: options.theme === "dark" ? "dark" : "light",
-    },
-  ]);
 
   const url = new URL(`${options.baseUrl}/fixture.html`);
-  url.searchParams.set("module", options.modulePath);
   url.searchParams.set("impl", options.impl);
-  url.searchParams.set("scenario", options.scenario);
-  url.searchParams.set("state", options.state);
-  url.searchParams.set("theme", options.theme);
-
   await page.goto(url.href, { waitUntil: "domcontentloaded" });
-  await waitForFixture(page);
+  await page.waitForFunction(() => typeof window.__renderSuite === "function", { timeout: 10000 });
 
-  const target = await page.$("[data-test-target]");
-  if (!target) {
-    throw new Error(`fixture ${options.modulePath} did not render [data-test-target]`);
-  }
+  return {
+    async renderSuite(renderOptions) {
+      await page.bringToFront();
+      await page.emulateMediaFeatures([
+        {
+          name: "prefers-color-scheme",
+          value: renderOptions.theme === "dark" ? "dark" : "light",
+        },
+      ]);
 
-  if (options.state === "hover") {
-    await target.hover();
-  }
+      const rendered = await page.evaluate((suiteOptions) => window.__renderSuite(suiteOptions), {
+        modulePath: renderOptions.modulePath,
+        impl: options.impl,
+        theme: renderOptions.theme,
+        columns: renderOptions.columns,
+        cases: renderOptions.cases.map((caseItem) => ({
+          id: caseItem.id,
+          name: caseItem.name,
+          scenario: caseItem.scenario,
+          state: caseItem.state,
+          pseudoState: caseItem.pseudoState,
+        })),
+      });
+      await waitForFixture(page);
+      await forcePseudoStates(session, rendered.cases);
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve())));
 
-  if (options.state === "active") {
-    const box = await target.boundingBox();
-    if (!box) {
-      throw new Error("missing target bounding box");
-    }
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.down();
-  }
-
-  const mount = await page.$("#mount");
-  if (!mount) {
-    throw new Error("missing #mount");
-  }
-  const image = Buffer.from(await mount.screenshot());
-
-  if (options.state === "active") {
-    await page.mouse.up();
-  }
-
-  await page.close();
-  return image;
+      return {
+        image: Buffer.from(await page.screenshot({
+          clip: await mountClip(page),
+          captureBeyondViewport: true,
+          optimizeForSpeed: true,
+        })),
+        cases: rendered.cases,
+      };
+    },
+    async close() {
+      await page.close();
+    },
+  };
 }
 
 /**
@@ -132,23 +130,192 @@ export async function screenshotFixture(browser, options) {
  */
 async function waitForFixture(page) {
   await page.waitForFunction(() => window.__fixtureReady === true, { timeout: 10000 });
-  await page.waitForSelector("[data-test-target]", { timeout: 10000 });
-  return;
 }
 
 /**
- * @param {Buffer} ours
- * @param {Buffer} reference
+ * @param {import('puppeteer').Page} page
+ */
+async function mountClip(page) {
+  const clip = await page.evaluate(() => {
+    const mount = document.querySelector("#mount");
+    if (!(mount instanceof HTMLElement)) {
+      throw new Error("missing #mount");
+    }
+
+    const rect = mount.getBoundingClientRect();
+    return {
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+    };
+  });
+
+  if (clip.width <= 0 || clip.height <= 0) {
+    throw new Error(`invalid mount clip ${clip.width}x${clip.height}`);
+  }
+
+  return clip;
+}
+
+async function forcePseudoStates(session, cases) {
+  const { root } = await session.send("DOM.getDocument", { depth: 1 });
+
+  for (const caseInfo of cases) {
+    const forcedPseudoClasses = pseudoClassesForState(caseInfo.pseudoState ?? caseInfo.state);
+    if (forcedPseudoClasses.length === 0) {
+      continue;
+    }
+
+    const { nodeId } = await session.send("DOM.querySelector", {
+      nodeId: root.nodeId,
+      selector: `[data-suite-case-id="${caseInfo.id}"] [data-test-target]`,
+    });
+    if (!nodeId) {
+      throw new Error(`missing [data-test-target] for ${caseInfo.name}`);
+    }
+
+    await session.send("CSS.forcePseudoState", {
+      nodeId,
+      forcedPseudoClasses,
+    });
+  }
+}
+
+function pseudoClassesForState(state) {
+  if (state === "hover") {
+    return ["hover"];
+  }
+  if (state === "active") {
+    return ["hover", "active"];
+  }
+  if (state === "focus") {
+    return ["focus", "focus-visible"];
+  }
+  return [];
+}
+
+function suiteThemes(suite) {
+  const themes = new Set();
+  for (const scenario of suite.scenarios) {
+    for (const theme of scenario.themes ?? ["light", "dark"]) {
+      themes.add(theme);
+    }
+  }
+  return [...themes];
+}
+
+function buildSuiteCases(suite, theme) {
+  const cases = [];
+  let columns = 1;
+
+  for (const scenario of suite.scenarios) {
+    const scenarioThemes = scenario.themes ?? ["light", "dark"];
+    if (!scenarioThemes.includes(theme)) {
+      continue;
+    }
+
+    const states = scenario.states ?? ["idle"];
+    columns = Math.max(columns, states.length);
+
+    for (const state of states) {
+      const name = `${suite.name}:${scenario.name}:${theme}:${state}`;
+      cases.push({
+        id: name,
+        name,
+        scenario: scenario.name,
+        state,
+        pseudoState: scenario.pseudoState ?? state,
+        maxDiffPixels: scenario.maxDiffPixels ?? 0,
+      });
+    }
+  }
+
+  return {
+    columns,
+    cases,
+  };
+}
+
+function caseMap(cases) {
+  return new Map(cases.map((caseInfo) => [caseInfo.id, caseInfo]));
+}
+
+function normalizeRect(rect, image) {
+  return {
+    x: Math.max(0, Math.round(rect.x)),
+    y: Math.max(0, Math.round(rect.y)),
+    width: Math.min(image.width - Math.max(0, Math.round(rect.x)), Math.max(1, Math.round(rect.width))),
+    height: Math.min(image.height - Math.max(0, Math.round(rect.y)), Math.max(1, Math.round(rect.height))),
+  };
+}
+
+function cropImage(rect, image) {
+  const output = new PNG({ width: rect.width, height: rect.height });
+  for (let row = 0; row < rect.height; row += 1) {
+    const sourceStart = ((rect.y + row) * image.width + rect.x) * 4;
+    const sourceEnd = sourceStart + rect.width * 4;
+    const targetStart = row * rect.width * 4;
+    image.data.copy(output.data, targetStart, sourceStart, sourceEnd);
+  }
+  return output;
+}
+
+let artifactsDirReady = null;
+
+async function ensureArtifactsDir() {
+  artifactsDirReady ??= fs.mkdir(artifactsDir, { recursive: true });
+  await artifactsDirReady;
+}
+
+async function writeArtifacts(name, files) {
+  await ensureArtifactsDir();
+  await Promise.all(files.map((file) => fs.writeFile(path.join(artifactsDir, `${name}.${file.suffix}.png`), file.content)));
+}
+
+async function compareSuiteSheets(oursSheet, referenceSheet, cases) {
+  const oursImage = PNG.sync.read(oursSheet.image);
+  const referenceImage = PNG.sync.read(referenceSheet.image);
+  const oursCases = caseMap(oursSheet.cases);
+  const referenceCases = caseMap(referenceSheet.cases);
+  const results = [];
+
+  for (const caseInfo of cases) {
+    const oursRect = oursCases.get(caseInfo.id);
+    const referenceRect = referenceCases.get(caseInfo.id);
+    if (!oursRect || !referenceRect) {
+      throw new Error(`missing suite metadata for ${caseInfo.name}`);
+    }
+
+    const comparison = await compareCaseImages(
+      cropImage(normalizeRect(oursRect, oursImage), oursImage),
+      cropImage(normalizeRect(referenceRect, referenceImage), referenceImage),
+      {
+        name: caseInfo.name,
+        maxDiffPixels: caseInfo.maxDiffPixels,
+      },
+    );
+
+    results.push({
+      ...comparison,
+      name: caseInfo.name,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * @param {PNG} oursImage
+ * @param {PNG} referenceImage
  * @param {{ name: string, maxDiffPixels?: number }} options
  */
-export async function comparePng(ours, reference, options) {
-  const oursImage = PNG.sync.read(ours);
-  const referenceImage = PNG.sync.read(reference);
-
+export async function compareCaseImages(oursImage, referenceImage, options) {
   if (oursImage.width !== referenceImage.width || oursImage.height !== referenceImage.height) {
-    await fs.mkdir(artifactsDir, { recursive: true });
-    await fs.writeFile(path.join(artifactsDir, `${options.name}.ours.png`), ours);
-    await fs.writeFile(path.join(artifactsDir, `${options.name}.reference.png`), reference);
+    await writeArtifacts(options.name, [
+      { suffix: "ours", content: PNG.sync.write(oursImage) },
+      { suffix: "reference", content: PNG.sync.write(referenceImage) },
+    ]);
     return {
       ok: false,
       reason: `size mismatch ${oursImage.width}x${oursImage.height} vs ${referenceImage.width}x${referenceImage.height}`,
@@ -156,11 +323,13 @@ export async function comparePng(ours, reference, options) {
     };
   }
 
-  const diff = new PNG({ width: oursImage.width, height: oursImage.height });
+  const oursData = Buffer.from(oursImage.data);
+  const referenceData = Buffer.from(referenceImage.data);
+
   const diffPixels = pixelmatch(
-    oursImage.data,
-    referenceImage.data,
-    diff.data,
+    oursData,
+    referenceData,
+    undefined,
     oursImage.width,
     oursImage.height,
     { threshold: 0.1 },
@@ -170,10 +339,20 @@ export async function comparePng(ours, reference, options) {
   const ok = diffPixels <= maxDiffPixels;
 
   if (!ok) {
-    await fs.mkdir(artifactsDir, { recursive: true });
-    await fs.writeFile(path.join(artifactsDir, `${options.name}.ours.png`), ours);
-    await fs.writeFile(path.join(artifactsDir, `${options.name}.reference.png`), reference);
-    await fs.writeFile(path.join(artifactsDir, `${options.name}.diff.png`), PNG.sync.write(diff));
+    const diff = new PNG({ width: oursImage.width, height: oursImage.height });
+    pixelmatch(
+      oursData,
+      referenceData,
+      diff.data,
+      oursImage.width,
+      oursImage.height,
+      { threshold: 0.1 },
+    );
+    await writeArtifacts(options.name, [
+      { suffix: "ours", content: PNG.sync.write(oursImage) },
+      { suffix: "reference", content: PNG.sync.write(referenceImage) },
+      { suffix: "diff", content: PNG.sync.write(diff) },
+    ]);
   }
 
   return {
@@ -202,7 +381,6 @@ async function main() {
   try {
     const suites = [];
     for (const file of files) {
-      if (file.indexOf("button") === -1) continue;
       const moduleUrl = pathToFileURL(path.join(componentsDir, file)).href;
       const mod = await import(moduleUrl);
       suites.push({
@@ -215,46 +393,49 @@ async function main() {
 
     const results = await withBrowser(async (browser) => {
       const output = [];
-      for (const suite of suites) {
-        console.log(color.dim(`\n# ${suite.name}`));
-        for (const scenario of suite.scenarios) {
-          const states = scenario.states ?? ["idle"];
-          const themes = scenario.themes ?? ["light", "dark"];
-          const maxDiffPixels = scenario.maxDiffPixels ?? 0;
-          for (const theme of themes) {
-            for (const state of states) {
-              const caseName = `${suite.name}:${scenario.name}:${theme}:${state}`;
-              const ours = await screenshotFixture(browser, {
-                baseUrl: server.baseUrl,
-                modulePath: suite.modulePath,
-                impl: "ours",
-                scenario: scenario.name,
-                state,
-                theme,
-              });
-              const reference = await screenshotFixture(browser, {
-                baseUrl: server.baseUrl,
-                modulePath: suite.modulePath,
-                impl: "reference",
-                scenario: scenario.name,
-                state,
-                theme,
-              });
-              const comparison = await comparePng(ours, reference, {
-                name: caseName,
-                maxDiffPixels,
-              });
-              const result = {
-                ...comparison,
-                name: caseName,
-              };
+      const oursRunner = await createFixtureRunner(browser, {
+        baseUrl: server.baseUrl,
+        impl: "ours",
+      });
+      const referenceRunner = await createFixtureRunner(browser, {
+        baseUrl: server.baseUrl,
+        impl: "reference",
+      });
+
+      try {
+        for (const suite of suites) {
+          console.log(color.dim(`\n# ${suite.name}`));
+          for (const theme of suiteThemes(suite)) {
+            const { columns, cases } = buildSuiteCases(suite, theme);
+            if (cases.length === 0) {
+              continue;
+            }
+
+            const oursSheet = await oursRunner.renderSuite({
+              modulePath: suite.modulePath,
+              theme,
+              columns,
+              cases,
+            });
+            const referenceSheet = await referenceRunner.renderSuite({
+              modulePath: suite.modulePath,
+              theme,
+              columns,
+              cases,
+            });
+            const suiteResults = await compareSuiteSheets(oursSheet, referenceSheet, cases);
+
+            for (const result of suiteResults) {
               output.push(result);
               console.log(formatCase(result));
             }
           }
         }
+        return output;
+      } finally {
+        await oursRunner.close();
+        await referenceRunner.close();
       }
-      return output;
     });
 
     const failed = results.filter((result) => !result.ok);

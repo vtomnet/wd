@@ -1,4 +1,4 @@
-import { SHADCN_ROOT, mountComparison, renderReact } from "./_util.js";
+import { SHADCN_ROOT, createSuiteFrame, createSuiteGrid, renderReact, suiteFrameProps } from "./_util.js";
 
 export const name = "button";
 
@@ -13,39 +13,53 @@ export const scenarios = [
   { name: "with-icon", states: ["idle", "hover", "active"] },
 ];
 
-export async function mount({ root, impl, scenario }) {
-  await mountComparison(root, impl, {
-    async ours() {
-      const [{ button, icon }, { plus }] = await Promise.all([
-        import("../../index.js"),
-        import("../../icons/index.js"),
-      ]);
-      return renderOurs(button, icon, plus, scenario);
+export async function renderSuite({ root, impl, cases, columns }) {
+  if (impl === "ours") {
+    const [{ button }, { icon }, { plus }] = await Promise.all([
+      import("../../button.js"),
+      import("../../icon.js"),
+      import("../../icons/index.js"),
+    ]);
+
+    const grid = createSuiteGrid(root, columns);
+    for (const caseItem of cases) {
+      const frame = createSuiteFrame(caseItem);
+      const element = renderOurs(button, icon, plus, caseItem.scenario);
+      element.setAttribute("data-test-target", "");
+      frame.root.append(element);
+      grid.append(frame.frame);
+    }
+    return;
+  }
+
+  const [React, { Button }, { PlusIcon }] = await Promise.all([
+    import("react"),
+    import(/* @vite-ignore */ `${SHADCN_ROOT}/button.tsx`),
+    import("lucide-react"),
+  ]);
+
+  return await renderReact(root, React.createElement(
+    "div",
+    {
+      className: "suite-grid",
+      style: { "--suite-columns": String(columns) },
     },
-
-    async reference() {
-      const [React, { Button }, { PlusIcon }] = await Promise.all([
-        import("react"),
-        import(/* @vite-ignore */ `${SHADCN_ROOT}/button.tsx`),
-        import("lucide-react"),
-      ]);
-
-      const props = buttonProps(scenario);
-      const iconNode = scenario === "icon-sm" || scenario === "with-icon"
-        ? React.createElement(PlusIcon)
-        : null;
-      const children = scenario === "icon-sm"
-        ? iconNode
-        : scenario === "with-icon"
-          ? [iconNode, "New"]
-          : labelFor(scenario);
-
-      await renderReact(root, React.createElement(Button, {
-        ...props,
-        "data-test-target": "",
-      }, children));
-    },
-  });
+    cases.map((caseItem) => React.createElement(
+      "div",
+      {
+        ...suiteFrameProps(caseItem),
+        key: caseItem.id,
+      },
+      React.createElement(
+        "div",
+        { className: "suite-case-root" },
+        React.createElement(Button, {
+          ...buttonProps(caseItem.scenario),
+          "data-test-target": "",
+        }, buttonChildren(React, PlusIcon, caseItem.scenario)),
+      ),
+    )),
+  ));
 }
 
 function renderOurs(button, icon, plus, scenario) {
@@ -66,6 +80,16 @@ function buttonProps(scenario) {
     return { variant: "default" };
   }
   return { variant: scenario === "default" ? "default" : scenario };
+}
+
+function buttonChildren(React, PlusIcon, scenario) {
+  if (scenario === "icon-sm") {
+    return React.createElement(PlusIcon);
+  }
+  if (scenario === "with-icon") {
+    return [React.createElement(PlusIcon, { key: "icon" }), "New"];
+  }
+  return labelFor(scenario);
 }
 
 function labelFor(scenario) {
