@@ -1,5 +1,5 @@
 import { batch, bind, computed, effect, keyed, resource, scope, signal, template } from "./runtime/index.js";
-import { badge, button, card, checkbox, icon, input } from "./ui/index.js";
+import { button, card, checkbox, icon, input } from "./ui/index.js";
 import { plus, trash2 } from "./ui/icons/index.js";
 
 /** @typedef {{ id: string, title: string, completed: boolean }} Todo */
