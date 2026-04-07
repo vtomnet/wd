@@ -117,7 +117,7 @@ export function mountPanel(items) {
 
 `ui-core/` is the behavior layer.
 
-It stays close to the platform and does not depend on `runtime`. It may accept a plain `AbortSignal` or `scope.signal`, but it should remain usable from ordinary DOM code too.
+It stays close to the platform and does not depend on `rt`. It may accept a plain `AbortSignal` or `scope.signal`, but it should remain usable from ordinary DOM code too.
 
 The rule of thumb is to prefer native elements and native behavior wherever they are good enough. Buttons should be real buttons. Inputs should be real inputs. Checkboxes should be real checkboxes. Dialogs should use `<dialog>` unless there is a strong reason not to. Popovers should lean on the Popover API where possible.
 
